@@ -1,0 +1,34 @@
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Pytest
+.pytest_cache/
+
+# Data output (keep directory, ignore content)
+data/*.json
+data/*.db
+!data/.gitkeep
+
+# Distribution
+dist/
+build/
+*.egg-info/

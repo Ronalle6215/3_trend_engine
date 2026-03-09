@@ -1,0 +1,28 @@
+language: vi
+
+trend_modes:
+  keyword: true
+  discovery: true
+
+time_window:
+  default: 24h
+  supported: [6h, 24h, 72h]
+
+seed_keywords:
+  - ai
+  - giáo dục
+  - fnb
+  - đồ uống
+  - bán lẻ
+  - vending
+
+sources:
+  google_trends: true
+  news_firecrawl: true
+  tiktok: true
+  ecommerce:
+    shopee: true
+    lazada: true
+
+ranking:
+  top_n: 20

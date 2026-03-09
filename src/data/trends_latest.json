@@ -1,0 +1,24 @@
+[
+  {
+    "trend_id": "trend_cluster_001",
+    "topic": "General Tech Trends",
+    "trend_type": "rising",
+    "trend_score": 85.5,
+    "confidence": 0.9,
+    "time_window": "24h",
+    "why_trending": [
+      "High search volume forces",
+      "News coverage"
+    ],
+    "sources": [
+      "google_trends",
+      "news_firecrawl"
+    ],
+    "evidence": [],
+    "suggested_actions": {
+      "content": [
+        "Write a blog post about AI"
+      ]
+    }
+  }
+]
