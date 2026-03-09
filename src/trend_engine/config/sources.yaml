@@ -9,12 +9,11 @@ time_window:
   supported: [6h, 24h, 72h]
 
 seed_keywords:
-  - ai
-  - giáo dục
-  - fnb
-  - đồ uống
-  - bán lẻ
-  - vending
+  - vending machine
+  - máy bán hàng tự động
+  - vending machine vietnam
+  - tự động bán lẻ
+  - smart vending
 
 sources:
   google_trends: true

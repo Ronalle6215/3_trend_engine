@@ -30,32 +30,46 @@ class FirecrawlNewsCollector(BaseCollector):
 
         for keyword in keywords:
             try:
-                query = f"{keyword} xu hướng tin tức Việt Nam"
+                query = f"{keyword} xu hướng Việt Nam"
                 logger.info(f"Firecrawl: searching '{query}'...")
 
-                results = app.search(
-                    query=query,
-                    limit=5,
-                )
+                results = app.search(query=query, limit=5)
 
-                if results and isinstance(results, dict):
-                    data = results.get("data", results.get("results", []))
+                # Firecrawl v2 SDK returns SearchData object
+                entries = []
+                if hasattr(results, "web") and results.web:
+                    entries = results.web
+                elif hasattr(results, "data"):
+                    entries = results.data if isinstance(results.data, list) else []
                 elif isinstance(results, list):
-                    data = results
-                else:
-                    data = []
+                    entries = results
+                elif isinstance(results, dict):
+                    entries = results.get("data", results.get("results", []))
 
-                for result in data:
-                    if isinstance(result, dict):
+                for entry in entries:
+                    title = ""
+                    url = ""
+                    snippet = ""
+
+                    if hasattr(entry, "title"):
+                        title = entry.title or ""
+                        url = entry.url or ""
+                        snippet = entry.description or ""
+                    elif isinstance(entry, dict):
+                        title = entry.get("title", "")
+                        url = entry.get("url", "")
+                        snippet = entry.get("description", entry.get("markdown", ""))
+
+                    if title:
                         items.append({
-                            "title": result.get("title", result.get("metadata", {}).get("title", "")),
-                            "url": result.get("url", result.get("sourceURL", "")),
-                            "snippet": result.get("description", result.get("markdown", ""))[:300],
+                            "title": title,
+                            "url": url,
+                            "snippet": snippet[:300] if snippet else "",
                             "keyword": keyword,
                             "type": "news_article",
                         })
 
-                logger.info(f"Firecrawl: got {len(data)} results for '{keyword}'")
+                logger.info(f"Firecrawl: got {len(entries)} results for '{keyword}'")
 
             except Exception as e:
                 logger.warning(f"Firecrawl search failed for '{keyword}': {e}")

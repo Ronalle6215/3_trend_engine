@@ -32,7 +32,7 @@ class GoogleTrendsCollector(BaseCollector):
         items: list[dict] = []
 
         try:
-            pytrends = TrendReq(hl="vi", tz=420, retries=3, backoff_factor=0.5)
+            pytrends = TrendReq(hl="vi", tz=420)
 
             # 1. Trending searches in Vietnam
             try:
