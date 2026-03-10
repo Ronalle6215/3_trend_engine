@@ -70,12 +70,18 @@ TEXT_MODELS = [
     {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash (nhanh, miễn phí)", "type": "text"},
     {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro (chất lượng cao)", "type": "text"},
     {"id": "gemini-2.0-flash-lite", "name": "Gemini 2.0 Flash Lite (nhẹ nhất)", "type": "text"},
+    {"id": "gemini-3.1-flash-image-preview", "name": "Gemini 3.1 Flash Image (text + hình)", "type": "text"},
+    {"id": "gemini-3-pro-image-preview", "name": "Gemini 3 Pro Image (text + hình cao cấp)", "type": "text"},
 ]
 
-# All models including image
-AVAILABLE_MODELS = TEXT_MODELS + [
-    {"id": "imagen-3.0-generate-002", "name": "🖼️ Imagen 3.0 (tạo hình ảnh)", "type": "image"},
+# Image-only generation models
+IMAGE_MODELS = [
+    {"id": "imagen-4.0-generate-001", "name": "🖼️ Imagen 4.0 (tạo hình tiêu chuẩn)", "type": "image"},
+    {"id": "imagen-4.0-fast-generate-001", "name": "⚡ Imagen 4.0 Fast (nhanh)", "type": "image"},
+    {"id": "imagen-4.0-ultra-generate-001", "name": "💎 Imagen 4.0 Ultra (chất lượng tốt nhất)", "type": "image"},
 ]
+
+AVAILABLE_MODELS = TEXT_MODELS + IMAGE_MODELS
 
 
 def _call_gemini(prompt: str, model_id: str = "gemini-2.5-flash") -> str:
@@ -86,14 +92,19 @@ def _call_gemini(prompt: str, model_id: str = "gemini-2.5-flash") -> str:
     return response.text.strip()
 
 
-def generate_image(prompt: str, aspect_ratio: str = "16:9") -> dict:
-    """Generate image using Imagen 3.0 via Gemini API."""
+def generate_image(
+    prompt: str,
+    aspect_ratio: str = "16:9",
+    model_id: str = "imagen-4.0-generate-001",
+) -> dict:
+    """Generate image using Imagen 4.0 via google-genai SDK."""
     try:
         from google import genai
         client = genai.Client(api_key=settings.gemini_api_key)
 
         response = client.models.generate_images(
-            model="imagen-3.0-generate-002",
+            model=model_id,
+
             prompt=prompt,
             config=genai.types.GenerateImagesConfig(
                 number_of_images=1,

@@ -115,8 +115,9 @@ async def generate_image_route(
     request: Request,
     image_prompt: str = Form(...),
     aspect_ratio: str = Form("16:9"),
+    image_model: str = Form("imagen-4.0-generate-001"),
 ):
-    result = generate_image(image_prompt, aspect_ratio)
+    result = generate_image(image_prompt, aspect_ratio, model_id=image_model)
     return templates.TemplateResponse("generate.html", _base_ctx(
         request,
         image_result=result,

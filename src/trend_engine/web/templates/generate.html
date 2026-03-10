@@ -140,6 +140,16 @@
             </div>
             <div class="form-row">
                 <div class="form-group">
+                    <label for="image_model">Image Model</label>
+                    <select name="image_model" id="image_model">
+                        {% for m in models %}
+                        {% if m.type == 'image' %}
+                        <option value="{{ m.id }}">{{ m.name }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="aspect_ratio">Tỷ lệ hình</label>
                     <select name="aspect_ratio" id="aspect_ratio">
                         <option value="16:9">16:9 (Blog banner)</option>
@@ -149,12 +159,12 @@
                         <option value="3:4">3:4 (Pinterest)</option>
                     </select>
                 </div>
-                <div class="form-group" style="align-self: flex-end;">
-                    <button type="submit" class="btn btn-primary" id="imgGenBtn">
-                        <span class="btn-text">🎨 Tạo Hình (Imagen 3.0)</span>
-                        <span class="btn-loading" style="display:none">⏳ Đang tạo hình...</span>
-                    </button>
-                </div>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary" id="imgGenBtn">
+                    <span class="btn-text">🎨 Tạo Hình AI</span>
+                    <span class="btn-loading" style="display:none">⏳ Đang tạo hình...</span>
+                </button>
             </div>
         </form>
 
