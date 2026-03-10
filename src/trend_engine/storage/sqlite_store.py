@@ -138,3 +138,50 @@ class SQLiteStore:
                 (limit,),
             ).fetchall()
             return [dict(row) for row in rows]
+
+    def get_trends_by_run(self, run_id: int) -> list[dict]:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM trends WHERE run_id = ? ORDER BY trend_score DESC",
+                (run_id,),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_score_timeline(self, topic: str | None = None, limit: int = 50) -> list[dict]:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            if topic:
+                rows = conn.execute(
+                    "SELECT topic, trend_score, detected_at FROM trends WHERE topic LIKE ? ORDER BY detected_at",
+                    (f"%{topic}%",),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """SELECT r.id as run_id, r.started_at,
+                       AVG(t.trend_score) as avg_score,
+                       COUNT(t.id) as trend_count
+                    FROM runs r
+                    LEFT JOIN trends t ON t.run_id = r.id
+                    WHERE r.status = 'completed'
+                    GROUP BY r.id
+                    ORDER BY r.started_at DESC
+                    LIMIT ?""",
+                    (limit,),
+                ).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_source_distribution(self, run_id: int | None = None) -> list[dict]:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            if run_id:
+                rows = conn.execute(
+                    "SELECT source, SUM(items_count) as total FROM signals WHERE run_id = ? GROUP BY source",
+                    (run_id,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT source, SUM(items_count) as total FROM signals GROUP BY source ORDER BY total DESC",
+                ).fetchall()
+            return [dict(row) for row in rows]
+

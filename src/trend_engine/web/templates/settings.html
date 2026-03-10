@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Trend Engine — Settings{% endblock %}
+{% block page_title %}⚙️ Settings{% endblock %}
+
+{% block content %}
+{% if msg %}
+<div class="toast-static">{{ msg }}</div>
+{% endif %}
+
+<!-- Keywords -->
+<div class="card">
+    <h3>🔑 Seed Keywords</h3>
+    <form method="post" action="/settings/keywords" class="analyze-form">
+        <div class="form-group">
+            <label for="keywords">Keywords (cách nhau bằng dấu phẩy)</label>
+            <input type="text" name="keywords" id="keywords" value="{{ keywords }}"
+                   placeholder="vending machine, máy bán hàng tự động">
+        </div>
+        <button type="submit" class="btn btn-primary">💾 Lưu Keywords</button>
+    </form>
+</div>
+
+<!-- Sources -->
+<div class="card">
+    <h3>📡 Data Sources</h3>
+    <div class="sources-grid">
+        {% for name, enabled in sources.items() %}
+        <div class="source-item {% if enabled %}enabled{% endif %}">
+            <span class="source-status">{% if enabled %}✅{% else %}⬜{% endif %}</span>
+            <span class="source-name">{{ name }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <p class="hint">Sửa file <code>sources.yaml</code> để bật/tắt nguồn dữ liệu.</p>
+</div>
+
+<!-- Telegram -->
+<div class="card">
+    <h3>📱 Telegram Alerts</h3>
+    {% if telegram_configured %}
+    <p>✅ Telegram đã được cấu hình.</p>
+    <form method="post" action="/settings/test-telegram">
+        <button type="submit" class="btn btn-secondary">📤 Gửi Test Message</button>
+    </form>
+    {% else %}
+    <p>⚠️ Chưa cấu hình. Thêm vào file <code>.env</code>:</p>
+    <pre class="code-block">TELEGRAM_BOT_TOKEN=your-bot-token
+TELEGRAM_CHAT_ID=your-chat-id</pre>
+    <p class="hint">Tạo bot tại <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, lấy chat ID tại <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>.</p>
+    {% endif %}
+</div>
+
+<!-- Current Config -->
+<div class="card">
+    <h3>📄 Current Configuration</h3>
+    <pre class="code-block">{{ config | tojson(indent=2) }}</pre>
+</div>
+{% endblock %}

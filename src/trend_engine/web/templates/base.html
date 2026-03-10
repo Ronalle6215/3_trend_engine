@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Trend Engine{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="logo-icon">🔥</span>
+            <span class="logo-text">Trend Engine</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="{% if page == 'dashboard' %}active{% endif %}">
+                <span class="nav-icon">📊</span> Dashboard
+            </a></li>
+            <li><a href="/analyze" class="{% if page == 'analyze' %}active{% endif %}">
+                <span class="nav-icon">🔍</span> Analyze
+            </a></li>
+            <li><a href="/generate" class="{% if page == 'generate' %}active{% endif %}">
+                <span class="nav-icon">✍️</span> Generate
+            </a></li>
+            <li><a href="/compare" class="{% if page == 'compare' %}active{% endif %}">
+                <span class="nav-icon">📈</span> Compare
+            </a></li>
+            <li><a href="/settings" class="{% if page == 'settings' %}active{% endif %}">
+                <span class="nav-icon">⚙️</span> Settings
+            </a></li>
+        </ul>
+    </nav>
+
+    <main class="content">
+        <header class="topbar">
+            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+        </header>
+        <div class="page-content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script src="/static/js/main.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Trend Engine — Compare{% endblock %}
+{% block page_title %}📈 Trend Comparison{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h3>So Sánh 2 Runs</h3>
+    <form method="get" action="/compare" class="analyze-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="run1">Run A</label>
+                <select name="run1" id="run1">
+                    <option value="">-- Chọn run --</option>
+                    {% for r in runs %}
+                    <option value="{{ r.id }}" {% if run1 == r.id %}selected{% endif %}>
+                        #{{ r.id }} — {{ r.started_at[:16] }} ({{ r.trends_count }} trends)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="run2">Run B</label>
+                <select name="run2" id="run2">
+                    <option value="">-- Chọn run --</option>
+                    {% for r in runs %}
+                    <option value="{{ r.id }}" {% if run2 == r.id %}selected{% endif %}>
+                        #{{ r.id }} — {{ r.started_at[:16] }} ({{ r.trends_count }} trends)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">🔄 So Sánh</button>
+        </div>
+    </form>
+</div>
+
+{% if comparison %}
+<div class="card">
+    <h3>Kết Quả So Sánh ({{ comparison|length }} topics)</h3>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Topic</th>
+                    <th>Run A Score</th>
+                    <th>Run B Score</th>
+                    <th>Change</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in comparison %}
+                <tr>
+                    <td class="topic-cell">{{ c.topic }}</td>
+                    <td>{{ c.score_run1 }}</td>
+                    <td>{{ c.score_run2 }}</td>
+                    <td>
+                        {% if c.direction == 'up' %}
+                        <span class="change-up">↑ +{{ c.change }}</span>
+                        {% elif c.direction == 'down' %}
+                        <span class="change-down">↓ {{ c.change }}</span>
+                        {% else %}
+                        <span class="change-same">— 0</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% elif run1 and run2 %}
+<div class="card">
+    <p class="empty-state">Không có dữ liệu để so sánh.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -36,6 +36,10 @@ class Settings:
     # Scheduler
     schedule_interval_hours: int = int(os.getenv("SCHEDULE_INTERVAL_HOURS", "6"))
 
+    # Telegram
+    telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "")
+
     # Paths
     project_root: Path = PROJECT_ROOT
     data_dir: Path = PROJECT_ROOT / "data"

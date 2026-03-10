@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Trend Engine — Generate Content{% endblock %}
+{% block page_title %}✍️ AI Content Generator{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h3>Chọn Trend & Loại Content</h3>
+    <form method="post" action="/generate" class="analyze-form" id="genForm">
+        <div class="form-group">
+            <label for="topic">Chọn Trend</label>
+            <select name="topic" id="topic" required>
+                <option value="">-- Chọn trend --</option>
+                {% for t in trends %}
+                <option value="{{ t.topic }}" {% if selected_topic == t.topic %}selected{% endif %}>
+                    {{ t.topic }} (Score: {{ "%.1f"|format(t.trend_score) }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Loại Content</label>
+                <div class="radio-group">
+                    <label class="radio-card {% if content_type == 'blog' or not content_type %}selected{% endif %}">
+                        <input type="radio" name="content_type" value="blog" {% if content_type == 'blog' or not content_type %}checked{% endif %}>
+                        <span>📝 Blog Post</span>
+                    </label>
+                    <label class="radio-card {% if content_type == 'facebook' %}selected{% endif %}">
+                        <input type="radio" name="content_type" value="facebook" {% if content_type == 'facebook' %}checked{% endif %}>
+                        <span>📘 Facebook</span>
+                    </label>
+                    <label class="radio-card {% if content_type == 'tiktok' %}selected{% endif %}">
+                        <input type="radio" name="content_type" value="tiktok" {% if content_type == 'tiktok' %}checked{% endif %}>
+                        <span>🎵 TikTok</span>
+                    </label>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="genBtn">
+                <span class="btn-text">✨ Tạo Content</span>
+                <span class="btn-loading" style="display:none">⏳ Đang tạo...</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+{% if content %}
+<div class="card">
+    <div class="content-header">
+        <h3>
+            {% if content_type == 'blog' %}📝 Blog Draft{% elif content_type == 'facebook' %}📘 Facebook Post{% else %}🎵 TikTok Hashtags{% endif %}
+            — "{{ selected_topic }}"
+        </h3>
+        <button class="btn btn-sm" onclick="copyContent()">📋 Copy</button>
+    </div>
+    <div class="generated-content" id="generatedContent">
+        <pre>{{ content }}</pre>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('genForm')?.addEventListener('submit', () => {
+    const btn = document.getElementById('genBtn');
+    btn.querySelector('.btn-text').style.display = 'none';
+    btn.querySelector('.btn-loading').style.display = 'inline';
+    btn.disabled = true;
+});
+
+document.querySelectorAll('.radio-card').forEach(card => {
+    card.addEventListener('click', () => {
+        document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+    });
+});
+
+function copyContent() {
+    const text = document.getElementById('generatedContent').innerText;
+    navigator.clipboard.writeText(text).then(() => showToast('Đã copy!'));
+}
+</script>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Trend Engine — Analyze{% endblock %}
+{% block page_title %}🔍 Analyze Keywords{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h3>Nhập Keywords để Phân Tích</h3>
+    <form method="post" action="/analyze" class="analyze-form" id="analyzeForm">
+        <div class="form-group">
+            <label for="keywords">Keywords (cách nhau bằng dấu phẩy)</label>
+            <input type="text" name="keywords" id="keywords"
+                   value="{{ keywords or '' }}"
+                   placeholder="vending machine, máy bán hàng tự động, smart retail"
+                   required>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="window">Time Window</label>
+                <select name="window" id="window">
+                    <option value="6h" {% if window == '6h' %}selected{% endif %}>6 giờ</option>
+                    <option value="24h" {% if window == '24h' or not window %}selected{% endif %}>24 giờ</option>
+                    <option value="72h" {% if window == '72h' %}selected{% endif %}>72 giờ</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                <span class="btn-text">🚀 Phân Tích</span>
+                <span class="btn-loading" style="display:none">⏳ Đang phân tích...</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+{% if error %}
+<div class="card error-card">
+    <h3>❌ Lỗi</h3>
+    <p>{{ error }}</p>
+</div>
+{% endif %}
+
+{% if results %}
+<div class="card">
+    <h3>📊 Kết Quả — {{ results|length }} trends detected (Run #{{ run_id }})</h3>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Topic</th>
+                    <th>Type</th>
+                    <th>Score</th>
+                    <th>Sources</th>
+                    <th>Why Trending</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for t in results %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="topic-cell">{{ t.topic }}</td>
+                    <td><span class="badge badge-{{ t.trend_type }}">{{ t.trend_type }}</span></td>
+                    <td>
+                        <div class="score-bar">
+                            <div class="score-fill" style="width: {{ t.trend_score }}%"></div>
+                            <span>{{ "%.1f"|format(t.trend_score) }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        {% for s in t.sources %}
+                        <span class="source-tag">{{ s }}</span>
+                        {% endfor %}
+                    </td>
+                    <td class="why-cell">
+                        {% if t.why_trending %}
+                            {{ t.why_trending[0][:100] }}{% if t.why_trending[0]|length > 100 %}...{% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if t.suggested_actions %}
+                        <details>
+                            <summary class="btn btn-sm">💡 Gợi ý</summary>
+                            <div class="actions-content">
+                                {% for cat, items in t.suggested_actions.items() %}
+                                <ul>
+                                    {% for item in items %}
+                                    <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endfor %}
+                            </div>
+                        </details>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('analyzeForm')?.addEventListener('submit', () => {
+    const btn = document.getElementById('analyzeBtn');
+    btn.querySelector('.btn-text').style.display = 'none';
+    btn.querySelector('.btn-loading').style.display = 'inline';
+    btn.disabled = true;
+});
+</script>
+{% endblock %}
