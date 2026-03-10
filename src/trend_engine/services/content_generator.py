@@ -1,8 +1,10 @@
 """
-Gemini-powered content generator — Full Content Studio
+Gemini-powered content generator — Full Content Studio + Image Generation
 """
 
+import base64
 import json
+import time
 from pathlib import Path
 
 from trend_engine.core.logging import get_logger
@@ -12,6 +14,9 @@ logger = get_logger(__name__)
 
 BRAND_KIT_DIR = settings.project_root / "data" / "brand_kit"
 BRAND_KIT_DIR.mkdir(parents=True, exist_ok=True)
+
+IMAGES_DIR = settings.project_root / "src" / "trend_engine" / "web" / "static" / "images" / "generated"
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 TONE_PRESETS = {
     "professional": "Chuyên nghiệp, đáng tin cậy, dùng số liệu cụ thể",
@@ -60,10 +65,16 @@ TEMPLATES = {
     },
 }
 
-AVAILABLE_MODELS = [
-    {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash (nhanh, miễn phí)"},
-    {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro (chất lượng cao)"},
-    {"id": "gemini-2.0-flash-lite", "name": "Gemini 2.0 Flash Lite (nhẹ nhất)"},
+# Text generation models
+TEXT_MODELS = [
+    {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash (nhanh, miễn phí)", "type": "text"},
+    {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro (chất lượng cao)", "type": "text"},
+    {"id": "gemini-2.0-flash-lite", "name": "Gemini 2.0 Flash Lite (nhẹ nhất)", "type": "text"},
+]
+
+# All models including image
+AVAILABLE_MODELS = TEXT_MODELS + [
+    {"id": "imagen-3.0-generate-002", "name": "🖼️ Imagen 3.0 (tạo hình ảnh)", "type": "image"},
 ]
 
 
@@ -73,6 +84,67 @@ def _call_gemini(prompt: str, model_id: str = "gemini-2.5-flash") -> str:
     model = genai.GenerativeModel(model_id)
     response = model.generate_content(prompt)
     return response.text.strip()
+
+
+def generate_image(prompt: str, aspect_ratio: str = "16:9") -> dict:
+    """Generate image using Imagen 3.0 via Gemini API."""
+    try:
+        from google import genai
+        client = genai.Client(api_key=settings.gemini_api_key)
+
+        response = client.models.generate_images(
+            model="imagen-3.0-generate-002",
+            prompt=prompt,
+            config=genai.types.GenerateImagesConfig(
+                number_of_images=1,
+                aspect_ratio=aspect_ratio,
+                output_mime_type="image/png",
+            ),
+        )
+
+        if response.generated_images:
+            image_data = response.generated_images[0].image.image_bytes
+            filename = f"gen_{int(time.time())}.png"
+            filepath = IMAGES_DIR / filename
+            filepath.write_bytes(image_data)
+
+            return {
+                "success": True,
+                "filename": filename,
+                "url": f"/static/images/generated/{filename}",
+            }
+        return {"success": False, "error": "Không tạo được hình ảnh"}
+
+    except Exception as e:
+        logger.error(f"Image generation failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def get_generated_images() -> list[dict]:
+    """List all generated images."""
+    images = []
+    if IMAGES_DIR.exists():
+        for f in sorted(IMAGES_DIR.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
+            if f.suffix in (".png", ".jpg", ".jpeg", ".webp"):
+                size = f.stat().st_size
+                images.append({
+                    "name": f.name,
+                    "url": f"/static/images/generated/{f.name}",
+                    "size": f"{size / 1024:.1f} KB",
+                })
+    return images[:20]
+
+
+def save_uploaded_image(filename: str, content: bytes) -> dict:
+    """Save user-uploaded image."""
+    safe_name = f"upload_{int(time.time())}_{filename}"
+    safe_name = "".join(c for c in safe_name if c.isalnum() or c in "._-").strip()
+    path = IMAGES_DIR / safe_name
+    path.write_bytes(content)
+    return {
+        "filename": safe_name,
+        "url": f"/static/images/generated/{safe_name}",
+    }
 
 
 def _load_brand_kit() -> str:

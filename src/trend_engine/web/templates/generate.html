@@ -3,6 +3,10 @@
 {% block page_title %}✍️ Content Studio{% endblock %}
 
 {% block content %}
+{% if msg %}
+<div class="toast-static">{{ msg }}</div>
+{% endif %}
+
 <!-- Templates Quick Select -->
 <div class="card">
     <h3>📋 Quick Templates</h3>
@@ -40,29 +44,31 @@
                 <label>Loại Content</label>
                 <div class="radio-group">
                     <label class="radio-card {% if content_type == 'blog' or not content_type %}selected{% endif %}">
-                        <input type="radio" name="content_type" value="blog" id="ct_blog"
+                        <input type="radio" name="content_type" value="blog"
                                {% if content_type == 'blog' or not content_type %}checked{% endif %}>
                         <span>📝 Blog</span>
                     </label>
                     <label class="radio-card {% if content_type == 'facebook' %}selected{% endif %}">
-                        <input type="radio" name="content_type" value="facebook" id="ct_fb"
+                        <input type="radio" name="content_type" value="facebook"
                                {% if content_type == 'facebook' %}checked{% endif %}>
                         <span>📘 Facebook</span>
                     </label>
                     <label class="radio-card {% if content_type == 'tiktok' %}selected{% endif %}">
-                        <input type="radio" name="content_type" value="tiktok" id="ct_tt"
+                        <input type="radio" name="content_type" value="tiktok"
                                {% if content_type == 'tiktok' %}checked{% endif %}>
                         <span>🎵 TikTok</span>
                     </label>
                 </div>
             </div>
             <div class="form-group">
-                <label for="model_id">AI Model</label>
+                <label for="model_id">AI Model (Text)</label>
                 <select name="model_id" id="model_id">
                     {% for m in models %}
+                    {% if m.type == 'text' %}
                     <option value="{{ m.id }}" {% if selected_model == m.id %}selected{% endif %}>
                         {{ m.name }}
                     </option>
+                    {% endif %}
                     {% endfor %}
                 </select>
             </div>
@@ -103,7 +109,7 @@
         <div class="form-group">
             <label for="custom_notes">Ghi Chú Thêm (tuỳ chọn)</label>
             <textarea name="custom_notes" id="custom_notes" rows="2"
-                      placeholder="VD: Nhấn mạnh sản phẩm XYZ, thêm số điện thoại hotline, dùng giọng văn miền Nam...">{{ custom_notes or '' }}</textarea>
+                      placeholder="VD: Nhấn mạnh sản phẩm XYZ, thêm số điện thoại hotline...">{{ custom_notes or '' }}</textarea>
         </div>
 
         <button type="submit" class="btn btn-primary" id="genBtn">
@@ -111,6 +117,88 @@
             <span class="btn-loading" style="display:none">⏳ Đang tạo...</span>
         </button>
     </form>
+</div>
+
+<!-- === IMAGE STUDIO === -->
+<div class="card">
+    <h3>🖼️ Hình Ảnh cho Bài Viết</h3>
+
+    <!-- Tab navigation -->
+    <div class="img-tabs">
+        <button class="img-tab active" onclick="showImgTab('generate')">🤖 Tạo bằng AI</button>
+        <button class="img-tab" onclick="showImgTab('upload')">📤 Upload hình</button>
+        <button class="img-tab" onclick="showImgTab('gallery')">🖼️ Thư viện ({{ generated_images|length }})</button>
+    </div>
+
+    <!-- Tab: Generate Image -->
+    <div id="tab-generate" class="img-tab-content active">
+        <form method="post" action="/generate/generate-image" class="analyze-form">
+            <div class="form-group">
+                <label for="image_prompt">Mô tả hình ảnh muốn tạo</label>
+                <textarea name="image_prompt" id="image_prompt" rows="2"
+                          placeholder="VD: Máy bán hàng tự động hiện đại trong trung tâm thương mại Việt Nam, phong cách photorealistic">{{ image_prompt or '' }}</textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="aspect_ratio">Tỷ lệ hình</label>
+                    <select name="aspect_ratio" id="aspect_ratio">
+                        <option value="16:9">16:9 (Blog banner)</option>
+                        <option value="1:1">1:1 (Instagram/FB)</option>
+                        <option value="4:3">4:3 (Presentation)</option>
+                        <option value="9:16">9:16 (TikTok/Story)</option>
+                        <option value="3:4">3:4 (Pinterest)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="align-self: flex-end;">
+                    <button type="submit" class="btn btn-primary" id="imgGenBtn">
+                        <span class="btn-text">🎨 Tạo Hình (Imagen 3.0)</span>
+                        <span class="btn-loading" style="display:none">⏳ Đang tạo hình...</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        {% if image_result %}
+        <div class="img-result" style="margin-top: 16px;">
+            {% if image_result.success %}
+            <div class="toast-static">✅ Hình đã tạo thành công!</div>
+            <div class="img-preview">
+                <img src="{{ image_result.url }}" alt="Generated image" style="max-width:100%; border-radius: 8px;">
+            </div>
+            <p class="hint">Click phải → "Save Image As" để tải về. Hoặc copy URL: <code>{{ image_result.url }}</code></p>
+            {% else %}
+            <div class="toast-static" style="background: rgba(239,68,68,0.15); color: #f87171;">
+                ❌ {{ image_result.error }}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Tab: Upload Image -->
+    <div id="tab-upload" class="img-tab-content">
+        <form method="post" action="/generate/upload-image" enctype="multipart/form-data" class="upload-form">
+            <input type="file" name="content_image" accept="image/*" required>
+            <button type="submit" class="btn btn-secondary">📤 Upload</button>
+        </form>
+        <p class="hint">Upload hình .png/.jpg/.webp (max 5MB) để dùng trong bài viết.</p>
+    </div>
+
+    <!-- Tab: Gallery -->
+    <div id="tab-gallery" class="img-tab-content">
+        {% if generated_images %}
+        <div class="img-gallery">
+            {% for img in generated_images %}
+            <div class="img-thumb">
+                <img src="{{ img.url }}" alt="{{ img.name }}" loading="lazy">
+                <span class="img-name">{{ img.name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state small">Chưa có hình ảnh. Tạo mới hoặc upload ở tab khác.</p>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Brand Kit Management -->
@@ -163,13 +251,11 @@ function applyTemplate(contentType, tone, wordCount) {
     document.getElementById('tone').value = tone;
     document.getElementById('word_count').value = wordCount;
     document.getElementById('wcLabel').textContent = wordCount;
-    // Set content type radio
     document.querySelectorAll('input[name="content_type"]').forEach(r => {
         r.checked = r.value === contentType;
     });
     document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
     document.querySelector(`input[value="${contentType}"]`)?.closest('.radio-card')?.classList.add('selected');
-    // Highlight selected template
     document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
     event.currentTarget.classList.add('active');
 }
@@ -181,16 +267,38 @@ document.querySelectorAll('.radio-card').forEach(card => {
     });
 });
 
-document.getElementById('genForm')?.addEventListener('submit', () => {
-    const btn = document.getElementById('genBtn');
-    btn.querySelector('.btn-text').style.display = 'none';
-    btn.querySelector('.btn-loading').style.display = 'inline';
-    btn.disabled = true;
+// Loading states
+['genForm'].forEach(id => {
+    document.getElementById(id)?.addEventListener('submit', function() {
+        const btn = this.querySelector('.btn-primary');
+        if (btn) {
+            btn.querySelector('.btn-text').style.display = 'none';
+            btn.querySelector('.btn-loading').style.display = 'inline';
+            btn.disabled = true;
+        }
+    });
+});
+
+document.querySelector('form[action="/generate/generate-image"]')?.addEventListener('submit', function() {
+    const btn = document.getElementById('imgGenBtn');
+    if (btn) {
+        btn.querySelector('.btn-text').style.display = 'none';
+        btn.querySelector('.btn-loading').style.display = 'inline';
+        btn.disabled = true;
+    }
 });
 
 function copyContent() {
     const text = document.getElementById('generatedContent').innerText;
     navigator.clipboard.writeText(text).then(() => showToast('📋 Đã copy!'));
+}
+
+// Image tabs
+function showImgTab(tab) {
+    document.querySelectorAll('.img-tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.img-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    event.currentTarget.classList.add('active');
 }
 </script>
 {% endblock %}
