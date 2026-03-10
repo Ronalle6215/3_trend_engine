@@ -6,13 +6,14 @@ import json
 
 from fastapi import APIRouter, Request, Form, UploadFile, File
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from pathlib import Path
 
 from trend_engine.storage.sqlite_store import SQLiteStore
 from trend_engine.services.content_generator import (
     generate_content,
     generate_image,
+    optimize_image_prompt,
     get_brand_kit_files,
     get_generated_images,
     save_brand_kit_file,
@@ -25,6 +26,9 @@ from trend_engine.services.content_generator import (
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
+
+REF_IMAGES_DIR = Path(__file__).resolve().parent.parent / "static" / "images" / "references"
+REF_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _get_trends():
@@ -40,6 +44,15 @@ def _get_trends():
 
 
 def _base_ctx(request, **extra):
+    # List reference images
+    ref_images = []
+    if REF_IMAGES_DIR.exists():
+        for f in sorted(REF_IMAGES_DIR.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
+            if f.suffix in (".png", ".jpg", ".jpeg", ".webp"):
+                ref_images.append({
+                    "name": f.name,
+                    "url": f"/static/images/references/{f.name}",
+                })
     return {
         "request": request,
         "page": "generate",
@@ -51,7 +64,9 @@ def _base_ctx(request, **extra):
         "models": AVAILABLE_MODELS,
         "brand_files": get_brand_kit_files(),
         "generated_images": get_generated_images(),
+        "ref_images": ref_images,
         "image_result": None,
+        "optimized_prompt": None,
         **extra,
     }
 
@@ -74,7 +89,6 @@ async def generate_content_route(
 ):
     trends = _get_trends()
 
-    # Find trend data
     why_trending = []
     sources = []
     for t in trends:
@@ -110,6 +124,24 @@ async def generate_content_route(
     ))
 
 
+# ─── Image endpoints ───────────────────────────────────────
+
+@router.post("/optimize-prompt", response_class=JSONResponse)
+async def optimize_prompt_route(
+    request: Request,
+    image_prompt: str = Form(...),
+    brand_text: str = Form(""),
+    reference_desc: str = Form(""),
+):
+    """Step 1: Optimize user prompt → return optimized version for review."""
+    optimized = optimize_image_prompt(
+        user_prompt=image_prompt,
+        brand_text=brand_text,
+        reference_desc=reference_desc,
+    )
+    return {"optimized_prompt": optimized}
+
+
 @router.post("/generate-image", response_class=HTMLResponse)
 async def generate_image_route(
     request: Request,
@@ -117,12 +149,30 @@ async def generate_image_route(
     aspect_ratio: str = Form("16:9"),
     image_model: str = Form("imagen-4.0-generate-001"),
 ):
+    """Step 2: Generate image using the confirmed (optimized) prompt."""
     result = generate_image(image_prompt, aspect_ratio, model_id=image_model)
     return templates.TemplateResponse("generate.html", _base_ctx(
         request,
         image_result=result,
         image_prompt=image_prompt,
     ))
+
+
+@router.post("/upload-reference", response_class=HTMLResponse)
+async def upload_reference(
+    request: Request,
+    ref_image: UploadFile = File(...),
+):
+    """Upload reference image (person, product) for image generation context."""
+    if ref_image.filename:
+        data = await ref_image.read()
+        if len(data) > 5 * 1024 * 1024:
+            return RedirectResponse(url="/generate?msg=File+quá+lớn+(max+5MB)", status_code=303)
+        import time
+        safe = f"ref_{int(time.time())}_{ref_image.filename}"
+        safe = "".join(c for c in safe if c.isalnum() or c in "._-").strip()
+        (REF_IMAGES_DIR / safe).write_bytes(data)
+    return RedirectResponse(url="/generate?msg=Reference+uploaded!", status_code=303)
 
 
 @router.post("/upload-image", response_class=HTMLResponse)

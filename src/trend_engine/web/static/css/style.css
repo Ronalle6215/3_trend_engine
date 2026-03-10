@@ -741,3 +741,43 @@ input[type="checkbox"] {
 .img-preview { margin-top: 12px; }
 
 .img-result { animation: fadeIn 0.4s ease; }
+
+/* Optimized prompt preview (2-step flow) */
+.optimized-preview {
+    background: rgba(34, 197, 94, 0.06);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    animation: fadeIn 0.4s ease;
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.preview-header h4 {
+    margin: 0;
+    color: #22c55e;
+    font-size: 15px;
+}
+
+.original-prompt {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.optimized-textarea {
+    background: var(--bg-secondary) !important;
+    border: 1px solid rgba(34, 197, 94, 0.3) !important;
+    font-size: 13px;
+    line-height: 1.6;
+}

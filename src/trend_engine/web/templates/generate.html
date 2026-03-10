@@ -25,7 +25,6 @@
 <div class="card">
     <h3>🎨 Tùy Chỉnh Content</h3>
     <form method="post" action="/generate" class="analyze-form" id="genForm">
-        <!-- Row 1: Topic -->
         <div class="form-group">
             <label for="topic">Chọn Trend</label>
             <select name="topic" id="topic" required>
@@ -38,7 +37,6 @@
             </select>
         </div>
 
-        <!-- Row 2: Content Type + AI Model -->
         <div class="form-row">
             <div class="form-group">
                 <label>Loại Content</label>
@@ -74,7 +72,6 @@
             </div>
         </div>
 
-        <!-- Row 3: Tone + Word Count -->
         <div class="form-row">
             <div class="form-group">
                 <label for="tone">Văn Phong</label>
@@ -95,7 +92,6 @@
             </div>
         </div>
 
-        <!-- Row 4: Brand Kit + Custom Notes -->
         <div class="form-row">
             <div class="form-group">
                 <label>
@@ -119,29 +115,51 @@
     </form>
 </div>
 
-<!-- === IMAGE STUDIO === -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- IMAGE STUDIO — Smart Prompt Flow                       -->
+<!-- ═══════════════════════════════════════════════════════ -->
 <div class="card">
-    <h3>🖼️ Hình Ảnh cho Bài Viết</h3>
+    <h3>🖼️ Image Studio</h3>
+    <p class="hint">
+        Bước 1: Nhập mô tả → AI tối ưu prompt theo chuẩn Nano Banana Pro →
+        Bước 2: Xác nhận → Tạo hình
+    </p>
 
     <!-- Tab navigation -->
     <div class="img-tabs">
         <button class="img-tab active" onclick="showImgTab('generate')">🤖 Tạo bằng AI</button>
         <button class="img-tab" onclick="showImgTab('upload')">📤 Upload hình</button>
+        <button class="img-tab" onclick="showImgTab('references')">📌 References ({{ ref_images|length }})</button>
         <button class="img-tab" onclick="showImgTab('gallery')">🖼️ Thư viện ({{ generated_images|length }})</button>
     </div>
 
-    <!-- Tab: Generate Image -->
+    <!-- ─── Tab: AI Generate (2-step flow) ─── -->
     <div id="tab-generate" class="img-tab-content active">
-        <form method="post" action="/generate/generate-image" class="analyze-form">
+
+        <!-- Step 1: User input -->
+        <div id="imgStep1">
             <div class="form-group">
-                <label for="image_prompt">Mô tả hình ảnh muốn tạo</label>
-                <textarea name="image_prompt" id="image_prompt" rows="2"
-                          placeholder="VD: Máy bán hàng tự động hiện đại trong trung tâm thương mại Việt Nam, phong cách photorealistic">{{ image_prompt or '' }}</textarea>
+                <label for="image_prompt">📝 Mô tả hình ảnh (prompt thô)</label>
+                <textarea id="image_prompt" rows="2"
+                          placeholder="VD: Máy bán hàng tự động Dropfoods trong trung tâm thương mại sang trọng">{{ image_prompt or '' }}</textarea>
             </div>
+
+            <div class="form-group">
+                <label for="brand_text">🏷️ Thương hiệu / Logo / Text trong hình (tuỳ chọn)</label>
+                <textarea id="brand_text" rows="2"
+                          placeholder='VD: Logo "Dropfoods" ở góc trên bên phải, tagline "Fresh Every Day", màu xanh lá #2ECC71'></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="reference_desc">📌 Mô tả Reference — người/sản phẩm gốc (tuỳ chọn)</label>
+                <textarea id="reference_desc" rows="2"
+                          placeholder="VD: Máy bán hàng model DF-500, màu trắng xám, có màn hình cảm ứng 21 inch, 6 tầng sản phẩm"></textarea>
+            </div>
+
             <div class="form-row">
                 <div class="form-group">
                     <label for="image_model">Image Model</label>
-                    <select name="image_model" id="image_model">
+                    <select id="image_model">
                         {% for m in models %}
                         {% if m.type == 'image' %}
                         <option value="{{ m.id }}">{{ m.name }}</option>
@@ -151,7 +169,7 @@
                 </div>
                 <div class="form-group">
                     <label for="aspect_ratio">Tỷ lệ hình</label>
-                    <select name="aspect_ratio" id="aspect_ratio">
+                    <select id="aspect_ratio">
                         <option value="16:9">16:9 (Blog banner)</option>
                         <option value="1:1">1:1 (Instagram/FB)</option>
                         <option value="4:3">4:3 (Presentation)</option>
@@ -160,13 +178,42 @@
                     </select>
                 </div>
             </div>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary" id="imgGenBtn">
-                    <span class="btn-text">🎨 Tạo Hình AI</span>
-                    <span class="btn-loading" style="display:none">⏳ Đang tạo hình...</span>
-                </button>
+
+            <button type="button" class="btn btn-primary" id="optimizeBtn" onclick="optimizePrompt()">
+                <span class="btn-text">🧠 Tối Ưu Prompt (Bước 1)</span>
+                <span class="btn-loading" style="display:none">⏳ Đang tối ưu...</span>
+            </button>
+        </div>
+
+        <!-- Step 2: Review optimized prompt → confirm → generate -->
+        <div id="imgStep2" style="display:none;">
+            <div class="optimized-preview">
+                <div class="preview-header">
+                    <h4>✅ Prompt đã tối ưu</h4>
+                    <button type="button" class="btn btn-sm" onclick="backToStep1()">← Sửa lại</button>
+                </div>
+
+                <div class="form-group">
+                    <label>Prompt gốc:</label>
+                    <div class="original-prompt" id="origPromptDisplay"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="optimized_prompt">Prompt tối ưu (có thể chỉnh sửa):</label>
+                    <textarea id="optimized_prompt" rows="5" class="optimized-textarea"></textarea>
+                </div>
+
+                <form method="post" action="/generate/generate-image" id="imgGenForm">
+                    <input type="hidden" name="image_prompt" id="finalPromptInput">
+                    <input type="hidden" name="aspect_ratio" id="finalAspectInput">
+                    <input type="hidden" name="image_model" id="finalModelInput">
+                    <button type="submit" class="btn btn-primary" id="imgGenBtn">
+                        <span class="btn-text">🎨 Xác Nhận & Tạo Hình</span>
+                        <span class="btn-loading" style="display:none">⏳ Đang tạo hình...</span>
+                    </button>
+                </form>
             </div>
-        </form>
+        </div>
 
         {% if image_result %}
         <div class="img-result" style="margin-top: 16px;">
@@ -175,7 +222,7 @@
             <div class="img-preview">
                 <img src="{{ image_result.url }}" alt="Generated image" style="max-width:100%; border-radius: 8px;">
             </div>
-            <p class="hint">Click phải → "Save Image As" để tải về. Hoặc copy URL: <code>{{ image_result.url }}</code></p>
+            <p class="hint">Click phải → "Save Image As" để tải về. URL: <code>{{ image_result.url }}</code></p>
             {% else %}
             <div class="toast-static" style="background: rgba(239,68,68,0.15); color: #f87171;">
                 ❌ {{ image_result.error }}
@@ -185,7 +232,7 @@
         {% endif %}
     </div>
 
-    <!-- Tab: Upload Image -->
+    <!-- ─── Tab: Upload Image ─── -->
     <div id="tab-upload" class="img-tab-content">
         <form method="post" action="/generate/upload-image" enctype="multipart/form-data" class="upload-form">
             <input type="file" name="content_image" accept="image/*" required>
@@ -194,7 +241,28 @@
         <p class="hint">Upload hình .png/.jpg/.webp (max 5MB) để dùng trong bài viết.</p>
     </div>
 
-    <!-- Tab: Gallery -->
+    <!-- ─── Tab: References ─── -->
+    <div id="tab-references" class="img-tab-content">
+        <p class="hint">Upload hình người, sản phẩm, logo gốc để AI tham khảo khi tạo hình.</p>
+        <form method="post" action="/generate/upload-reference" enctype="multipart/form-data" class="upload-form">
+            <input type="file" name="ref_image" accept="image/*" required>
+            <button type="submit" class="btn btn-secondary">📌 Upload Reference</button>
+        </form>
+        {% if ref_images %}
+        <div class="img-gallery" style="margin-top: 12px;">
+            {% for img in ref_images %}
+            <div class="img-thumb">
+                <img src="{{ img.url }}" alt="{{ img.name }}" loading="lazy">
+                <span class="img-name">{{ img.name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state small">Chưa có reference. Upload hình sản phẩm/người gốc ở trên.</p>
+        {% endif %}
+    </div>
+
+    <!-- ─── Tab: Gallery ─── -->
     <div id="tab-gallery" class="img-tab-content">
         {% if generated_images %}
         <div class="img-gallery">
@@ -257,6 +325,7 @@
 
 {% block scripts %}
 <script>
+/* ── Template Quick Select ── */
 function applyTemplate(contentType, tone, wordCount) {
     document.getElementById('tone').value = tone;
     document.getElementById('word_count').value = wordCount;
@@ -277,20 +346,9 @@ document.querySelectorAll('.radio-card').forEach(card => {
     });
 });
 
-// Loading states
-['genForm'].forEach(id => {
-    document.getElementById(id)?.addEventListener('submit', function() {
-        const btn = this.querySelector('.btn-primary');
-        if (btn) {
-            btn.querySelector('.btn-text').style.display = 'none';
-            btn.querySelector('.btn-loading').style.display = 'inline';
-            btn.disabled = true;
-        }
-    });
-});
-
-document.querySelector('form[action="/generate/generate-image"]')?.addEventListener('submit', function() {
-    const btn = document.getElementById('imgGenBtn');
+/* ── Content form loading state ── */
+document.getElementById('genForm')?.addEventListener('submit', function() {
+    const btn = this.querySelector('.btn-primary');
     if (btn) {
         btn.querySelector('.btn-text').style.display = 'none';
         btn.querySelector('.btn-loading').style.display = 'inline';
@@ -298,17 +356,68 @@ document.querySelector('form[action="/generate/generate-image"]')?.addEventListe
     }
 });
 
-function copyContent() {
-    const text = document.getElementById('generatedContent').innerText;
-    navigator.clipboard.writeText(text).then(() => showToast('📋 Đã copy!'));
+/* ── Image Studio: 2-step prompt optimization flow ── */
+
+async function optimizePrompt() {
+    const prompt = document.getElementById('image_prompt').value.trim();
+    if (!prompt) { alert('Vui lòng nhập mô tả hình ảnh!'); return; }
+
+    const btn = document.getElementById('optimizeBtn');
+    btn.querySelector('.btn-text').style.display = 'none';
+    btn.querySelector('.btn-loading').style.display = 'inline';
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('image_prompt', prompt);
+    formData.append('brand_text', document.getElementById('brand_text').value);
+    formData.append('reference_desc', document.getElementById('reference_desc').value);
+
+    try {
+        const res = await fetch('/generate/optimize-prompt', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        // Show step 2
+        document.getElementById('origPromptDisplay').textContent = prompt;
+        document.getElementById('optimized_prompt').value = data.optimized_prompt;
+        document.getElementById('imgStep1').style.display = 'none';
+        document.getElementById('imgStep2').style.display = 'block';
+    } catch(e) {
+        alert('Lỗi tối ưu prompt: ' + e.message);
+    } finally {
+        btn.querySelector('.btn-text').style.display = 'inline';
+        btn.querySelector('.btn-loading').style.display = 'none';
+        btn.disabled = false;
+    }
 }
 
-// Image tabs
+function backToStep1() {
+    document.getElementById('imgStep1').style.display = 'block';
+    document.getElementById('imgStep2').style.display = 'none';
+}
+
+/* ── Image generate form: inject values before submit ── */
+document.getElementById('imgGenForm')?.addEventListener('submit', function(e) {
+    document.getElementById('finalPromptInput').value = document.getElementById('optimized_prompt').value;
+    document.getElementById('finalAspectInput').value = document.getElementById('aspect_ratio').value;
+    document.getElementById('finalModelInput').value = document.getElementById('image_model').value;
+
+    const btn = document.getElementById('imgGenBtn');
+    btn.querySelector('.btn-text').style.display = 'none';
+    btn.querySelector('.btn-loading').style.display = 'inline';
+    btn.disabled = true;
+});
+
+/* ── Tab switching ── */
 function showImgTab(tab) {
     document.querySelectorAll('.img-tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.img-tab').forEach(t => t.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
     event.currentTarget.classList.add('active');
+}
+
+function copyContent() {
+    const text = document.getElementById('generatedContent').innerText;
+    navigator.clipboard.writeText(text).then(() => showToast('📋 Đã copy!'));
 }
 </script>
 {% endblock %}

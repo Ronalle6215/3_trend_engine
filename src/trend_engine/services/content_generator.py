@@ -92,26 +92,81 @@ def _call_gemini(prompt: str, model_id: str = "gemini-2.5-flash") -> str:
     return response.text.strip()
 
 
+PROMPT_OPTIMIZER_SYSTEM = """Bạn là chuyên gia tối ưu prompt cho AI image generation (Imagen / Nano Banana Pro).
+
+Quy tắc tối ưu (theo Google Master Guide to Nano Banana Pro Prompts):
+
+1. CHỦ THỂ: Mô tả chi tiết chủ thể — người, vật, sản phẩm. Nêu rõ đặc điểm: size, màu sắc, chất liệu, vị trí.
+2. BỐI CẢNH: Mô tả environment cụ thể — indoor/outdoor, thời gian trong ngày, mùa, location.
+3. ÁNH SÁNG: Chỉ rõ lighting — natural light, studio lighting, golden hour, neon glow, soft diffused, dramatic shadows.
+4. GÓC CHỤP: Dùng thuật ngữ nhiếp ảnh — eye-level, low angle, aerial view, close-up, medium shot, wide shot, 3/4 view.
+5. PHONG CÁCH: Chỉ rõ style — photorealistic, editorial, product photography, cinematic, flat lay, lifestyle.
+6. TYPOGRAPHY: Nếu có text/logo trong hình, đặt text trong dấu ngoặc kép, chỉ rõ font style, vị trí, màu.
+7. TÍCH CỰC: Mô tả cái MUỐN, không nói cái KHÔNG muốn. VD: "empty background" thay vì "no clutter".
+8. KỸ THUẬT: Thêm các keywords: high resolution, sharp focus, professional, 8K, detailed textures.
+
+NHIỆM VỤ: Nhận prompt thô từ user → viết lại thành prompt tối ưu cho Imagen.
+- Output CHỈNH là prompt tối ưu (không giải thích, không ghi chú)
+- Giữ nguyên ngôn ngữ English cho prompt (Imagen hoạt động tốt nhất với tiếng Anh)
+- Dịch concept từ tiếng Việt sang tiếng Anh nếu cần
+- Prompt tối ưu nên dài 2-5 câu, rõ ràng, chi tiết"""
+
+
+def optimize_image_prompt(
+    user_prompt: str,
+    brand_text: str = "",
+    reference_desc: str = "",
+) -> str:
+    """Use Gemini to optimize a raw user prompt into a professional Imagen prompt."""
+    parts = [f"Prompt thô từ user: {user_prompt}"]
+
+    if brand_text:
+        parts.append(
+            f"\nThông tin thương hiệu cần đưa vào hình: {brand_text}\n"
+            f"- Nếu có tên brand/logo → đặt trong ngoặc kép, chỉ rõ vị trí và style.\n"
+            f"- Nếu có tagline → render dưới dạng typography trong hình."
+        )
+
+    if reference_desc:
+        parts.append(
+            f"\nMô tả reference (người/sản phẩm gốc): {reference_desc}\n"
+            f"- Tích hợp mô tả reference vào prompt một cách tự nhiên."
+        )
+
+    full_prompt = f"{PROMPT_OPTIMIZER_SYSTEM}\n\n{''.join(parts)}"
+
+    try:
+        return _call_gemini(full_prompt, "gemini-2.5-flash")
+    except Exception as e:
+        logger.error(f"Prompt optimization failed: {e}")
+        return user_prompt
+
+
 def generate_image(
     prompt: str,
     aspect_ratio: str = "16:9",
     model_id: str = "imagen-4.0-generate-001",
+    reference_image_path: str = "",
 ) -> dict:
     """Generate image using Imagen 4.0 via google-genai SDK."""
     try:
         from google import genai
         client = genai.Client(api_key=settings.gemini_api_key)
 
-        response = client.models.generate_images(
-            model=model_id,
-
-            prompt=prompt,
-            config=genai.types.GenerateImagesConfig(
-                number_of_images=1,
-                aspect_ratio=aspect_ratio,
-                output_mime_type="image/png",
-            ),
+        config = genai.types.GenerateImagesConfig(
+            number_of_images=1,
+            aspect_ratio=aspect_ratio,
+            output_mime_type="image/png",
         )
+
+        # If reference image provided, add to config
+        gen_kwargs = {
+            "model": model_id,
+            "prompt": prompt,
+            "config": config,
+        }
+
+        response = client.models.generate_images(**gen_kwargs)
 
         if response.generated_images:
             image_data = response.generated_images[0].image.image_bytes
