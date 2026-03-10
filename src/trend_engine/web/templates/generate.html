@@ -1,11 +1,27 @@
 {% extends "base.html" %}
-{% block title %}Trend Engine — Generate Content{% endblock %}
-{% block page_title %}✍️ AI Content Generator{% endblock %}
+{% block title %}Trend Engine — Content Studio{% endblock %}
+{% block page_title %}✍️ Content Studio{% endblock %}
 
 {% block content %}
+<!-- Templates Quick Select -->
 <div class="card">
-    <h3>Chọn Trend & Loại Content</h3>
+    <h3>📋 Quick Templates</h3>
+    <div class="templates-grid">
+        {% for key, tpl in template_presets.items() %}
+        <button type="button" class="template-card" onclick="applyTemplate('{{ tpl.content_type }}', '{{ tpl.tone }}', {{ tpl.word_count }})">
+            <span class="template-name">{{ tpl.name }}</span>
+            <span class="template-desc">{{ tpl.desc }}</span>
+            <span class="template-meta">{{ tpl.word_count }} từ · {{ tpl.tone }}</span>
+        </button>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Main Form -->
+<div class="card">
+    <h3>🎨 Tùy Chỉnh Content</h3>
     <form method="post" action="/generate" class="analyze-form" id="genForm">
+        <!-- Row 1: Topic -->
         <div class="form-group">
             <label for="topic">Chọn Trend</label>
             <select name="topic" id="topic" required>
@@ -17,37 +33,119 @@
                 {% endfor %}
             </select>
         </div>
+
+        <!-- Row 2: Content Type + AI Model -->
         <div class="form-row">
             <div class="form-group">
                 <label>Loại Content</label>
                 <div class="radio-group">
                     <label class="radio-card {% if content_type == 'blog' or not content_type %}selected{% endif %}">
-                        <input type="radio" name="content_type" value="blog" {% if content_type == 'blog' or not content_type %}checked{% endif %}>
-                        <span>📝 Blog Post</span>
+                        <input type="radio" name="content_type" value="blog" id="ct_blog"
+                               {% if content_type == 'blog' or not content_type %}checked{% endif %}>
+                        <span>📝 Blog</span>
                     </label>
                     <label class="radio-card {% if content_type == 'facebook' %}selected{% endif %}">
-                        <input type="radio" name="content_type" value="facebook" {% if content_type == 'facebook' %}checked{% endif %}>
+                        <input type="radio" name="content_type" value="facebook" id="ct_fb"
+                               {% if content_type == 'facebook' %}checked{% endif %}>
                         <span>📘 Facebook</span>
                     </label>
                     <label class="radio-card {% if content_type == 'tiktok' %}selected{% endif %}">
-                        <input type="radio" name="content_type" value="tiktok" {% if content_type == 'tiktok' %}checked{% endif %}>
+                        <input type="radio" name="content_type" value="tiktok" id="ct_tt"
+                               {% if content_type == 'tiktok' %}checked{% endif %}>
                         <span>🎵 TikTok</span>
                     </label>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" id="genBtn">
-                <span class="btn-text">✨ Tạo Content</span>
-                <span class="btn-loading" style="display:none">⏳ Đang tạo...</span>
-            </button>
+            <div class="form-group">
+                <label for="model_id">AI Model</label>
+                <select name="model_id" id="model_id">
+                    {% for m in models %}
+                    <option value="{{ m.id }}" {% if selected_model == m.id %}selected{% endif %}>
+                        {{ m.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
+
+        <!-- Row 3: Tone + Word Count -->
+        <div class="form-row">
+            <div class="form-group">
+                <label for="tone">Văn Phong</label>
+                <select name="tone" id="tone">
+                    {% for key, desc in tone_presets.items() %}
+                    <option value="{{ key }}" {% if selected_tone == key %}selected{% endif %}>
+                        {{ key | capitalize }} — {{ desc[:40] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="word_count">Độ Dài: <span id="wcLabel">{{ word_count or 500 }}</span> từ</label>
+                <input type="range" name="word_count" id="word_count"
+                       min="100" max="2000" step="50"
+                       value="{{ word_count or 500 }}"
+                       oninput="document.getElementById('wcLabel').textContent = this.value">
+            </div>
+        </div>
+
+        <!-- Row 4: Brand Kit + Custom Notes -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="use_brand_kit" value="true"
+                           {% if brand_files %}checked{% endif %}>
+                    📎 Sử dụng Brand Kit ({{ brand_files|length }} tài liệu)
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="custom_notes">Ghi Chú Thêm (tuỳ chọn)</label>
+            <textarea name="custom_notes" id="custom_notes" rows="2"
+                      placeholder="VD: Nhấn mạnh sản phẩm XYZ, thêm số điện thoại hotline, dùng giọng văn miền Nam...">{{ custom_notes or '' }}</textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="genBtn">
+            <span class="btn-text">✨ Tạo Content</span>
+            <span class="btn-loading" style="display:none">⏳ Đang tạo...</span>
+        </button>
     </form>
 </div>
 
+<!-- Brand Kit Management -->
+<div class="card">
+    <h3>📎 Brand Kit — Tài Liệu MKT</h3>
+    <p class="hint">Upload tài liệu thương hiệu (.txt, .md) để AI tham khảo khi viết bài.</p>
+
+    {% if brand_files %}
+    <div class="brand-files">
+        {% for f in brand_files %}
+        <div class="brand-file-item">
+            <span>📄 {{ f.name }} ({{ f.size }})</span>
+            <form method="post" action="/generate/delete-brand" style="display:inline">
+                <input type="hidden" name="filename" value="{{ f.name }}">
+                <button type="submit" class="btn btn-sm btn-danger">🗑</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state small">Chưa có tài liệu. Upload file .txt hoặc .md bên dưới.</p>
+    {% endif %}
+
+    <form method="post" action="/generate/upload-brand" enctype="multipart/form-data" class="upload-form">
+        <input type="file" name="brand_file" accept=".txt,.md" required>
+        <button type="submit" class="btn btn-secondary">📤 Upload</button>
+    </form>
+</div>
+
+<!-- Generated Content -->
 {% if content %}
 <div class="card">
     <div class="content-header">
         <h3>
-            {% if content_type == 'blog' %}📝 Blog Draft{% elif content_type == 'facebook' %}📘 Facebook Post{% else %}🎵 TikTok Hashtags{% endif %}
+            {% if content_type == 'blog' %}📝 Blog{% elif content_type == 'facebook' %}📘 Facebook{% else %}🎵 TikTok{% endif %}
             — "{{ selected_topic }}"
         </h3>
         <button class="btn btn-sm" onclick="copyContent()">📋 Copy</button>
@@ -61,12 +159,20 @@
 
 {% block scripts %}
 <script>
-document.getElementById('genForm')?.addEventListener('submit', () => {
-    const btn = document.getElementById('genBtn');
-    btn.querySelector('.btn-text').style.display = 'none';
-    btn.querySelector('.btn-loading').style.display = 'inline';
-    btn.disabled = true;
-});
+function applyTemplate(contentType, tone, wordCount) {
+    document.getElementById('tone').value = tone;
+    document.getElementById('word_count').value = wordCount;
+    document.getElementById('wcLabel').textContent = wordCount;
+    // Set content type radio
+    document.querySelectorAll('input[name="content_type"]').forEach(r => {
+        r.checked = r.value === contentType;
+    });
+    document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+    document.querySelector(`input[value="${contentType}"]`)?.closest('.radio-card')?.classList.add('selected');
+    // Highlight selected template
+    document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+}
 
 document.querySelectorAll('.radio-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -75,9 +181,16 @@ document.querySelectorAll('.radio-card').forEach(card => {
     });
 });
 
+document.getElementById('genForm')?.addEventListener('submit', () => {
+    const btn = document.getElementById('genBtn');
+    btn.querySelector('.btn-text').style.display = 'none';
+    btn.querySelector('.btn-loading').style.display = 'inline';
+    btn.disabled = true;
+});
+
 function copyContent() {
     const text = document.getElementById('generatedContent').innerText;
-    navigator.clipboard.writeText(text).then(() => showToast('Đã copy!'));
+    navigator.clipboard.writeText(text).then(() => showToast('📋 Đã copy!'));
 }
 </script>
 {% endblock %}

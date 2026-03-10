@@ -7,6 +7,67 @@
 <div class="toast-static">{{ msg }}</div>
 {% endif %}
 
+<!-- API Keys -->
+<div class="card">
+    <h3>🔑 API Keys</h3>
+    <form method="post" action="/settings/api-keys" class="analyze-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="gemini_key">Gemini API Key</label>
+                <div class="key-input-row">
+                    <input type="password" name="gemini_key" id="gemini_key"
+                           value="{{ gemini_key_masked }}"
+                           placeholder="AIzaSy...">
+                    <button type="button" class="btn btn-sm" onclick="toggleKey('gemini_key')">👁</button>
+                </div>
+                <span class="key-status {% if has_gemini %}connected{% endif %}">
+                    {% if has_gemini %}✅ Configured{% else %}⬜ Not set{% endif %}
+                </span>
+            </div>
+            <div class="form-group">
+                <label for="firecrawl_key">Firecrawl API Key</label>
+                <div class="key-input-row">
+                    <input type="password" name="firecrawl_key" id="firecrawl_key"
+                           value="{{ firecrawl_key_masked }}"
+                           placeholder="fc-...">
+                    <button type="button" class="btn btn-sm" onclick="toggleKey('firecrawl_key')">👁</button>
+                </div>
+                <span class="key-status {% if has_firecrawl %}connected{% endif %}">
+                    {% if has_firecrawl %}✅ Configured{% else %}⬜ Not set{% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="telegram_token">Telegram Bot Token</label>
+                <div class="key-input-row">
+                    <input type="password" name="telegram_token" id="telegram_token"
+                           value="{{ telegram_token_masked }}"
+                           placeholder="123456:ABC-DEF...">
+                    <button type="button" class="btn btn-sm" onclick="toggleKey('telegram_token')">👁</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="telegram_chat">Telegram Chat ID</label>
+                <input type="text" name="telegram_chat" id="telegram_chat"
+                       value="{{ telegram_chat_id }}"
+                       placeholder="-1001234567890">
+            </div>
+        </div>
+        <div class="btn-row">
+            <button type="submit" class="btn btn-primary">💾 Save API Keys</button>
+            <form method="post" action="/settings/test-api" style="display:inline">
+                <input type="hidden" name="service" value="gemini">
+                <button type="submit" class="btn btn-secondary">🔬 Test Gemini</button>
+            </form>
+            <form method="post" action="/settings/test-api" style="display:inline">
+                <input type="hidden" name="service" value="firecrawl">
+                <button type="submit" class="btn btn-secondary">🔬 Test Firecrawl</button>
+            </form>
+        </div>
+    </form>
+</div>
+
 <!-- Keywords -->
 <div class="card">
     <h3>🔑 Seed Keywords</h3>
@@ -43,16 +104,17 @@
         <button type="submit" class="btn btn-secondary">📤 Gửi Test Message</button>
     </form>
     {% else %}
-    <p>⚠️ Chưa cấu hình. Thêm vào file <code>.env</code>:</p>
-    <pre class="code-block">TELEGRAM_BOT_TOKEN=your-bot-token
-TELEGRAM_CHAT_ID=your-chat-id</pre>
+    <p>⚠️ Nhập Telegram Bot Token và Chat ID ở phần API Keys bên trên.</p>
     <p class="hint">Tạo bot tại <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, lấy chat ID tại <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>.</p>
     {% endif %}
 </div>
+{% endblock %}
 
-<!-- Current Config -->
-<div class="card">
-    <h3>📄 Current Configuration</h3>
-    <pre class="code-block">{{ config | tojson(indent=2) }}</pre>
-</div>
+{% block scripts %}
+<script>
+function toggleKey(id) {
+    const input = document.getElementById(id);
+    input.type = input.type === 'password' ? 'text' : 'password';
+}
+</script>
 {% endblock %}
