@@ -37,7 +37,7 @@ class KeywordExtractor:
         import google.generativeai as genai
 
         genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
 
         combined = "\n".join(texts[:50])  # Limit to avoid token overflow
         prompt = (

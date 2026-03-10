@@ -100,7 +100,7 @@ class TrendScorer:
             import google.generativeai as genai
 
             genai.configure(api_key=settings.gemini_api_key)
-            model = genai.GenerativeModel("gemini-2.0-flash")
+            model = genai.GenerativeModel("gemini-2.5-flash")
 
             topics_summary = "\n".join(
                 f"- {r.topic} (score: {r.trend_score}, sources: {', '.join(r.sources)})"
